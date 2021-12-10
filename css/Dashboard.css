@@ -1,0 +1,116 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  float: left;
+  font-family: 'Titillium Web', serif;
+  /*border: 2px solid red;*/
+  background-image: url("../img/background.jpg");
+  background-size: cover;
+  background-position: 0;
+  background-color: white;
+}
+
+#map {
+  width: 66%;
+  height: 100%;
+  margin: 0;
+  float: right;
+  padding: 40px 15px 0px 35px;
+  font-family: 'Titillium Web', serif;
+  /*border: 2px solid blue;*/
+}
+
+#sidebar {
+  z-index: 1000;
+  position: absolute;
+  width: 33%;
+  top: 4.3%;
+  bottom: 9%;
+  left: 1%;
+  padding: 40px 15px 40px 15px;
+  background: beige;
+  color: black;
+  border: 4px solid green;
+  font-family: 'Oswald', sans-serif;
+  overflow-y: auto;
+}
+
+@media only screen and (max-width: 1026px) {
+  #sidebar {
+    visibility: hidden !important;
+  }
+}
+
+#sidebar a {
+  color: rgb(92, 91, 91);
+}
+
+#sidebar a:hover {
+  color: blue;
+}
+
+#sidebar h4 i {
+  font-size: 1.25e;
+  padding-right: 10px
+}
+
+#title {
+  font-size: 30px;
+  font-family: 'Oswald', sans-serif;
+}
+
+/* social media icons */
+#title span {
+  font-size: 14px;
+  float: right;
+  margin-right: 10px;
+}
+
+#placename {
+  font-size: 40px;
+  font-family: 'Oswald', sans-serif;
+}
+
+#desc {
+  text-align: left;
+  color: black;
+  font-size: 18px;
+  font-weight: bold;
+  font-family: 'Oswald', sans-serif;
+}
+
+#tooltip {
+  position: absolute;
+  z-index: 2;
+  background: rgba(0, 153, 76, 0.8);
+  width: 130px;
+  height: 40px;
+  color: white;
+  font-size: 14px;
+  padding: 5px;
+  top: -150px;
+  left: -150px;
+  font-family: "HelveticaNeue-Light", "Helvetica Neue Light",
+    "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+}
+
+#footer {
+  position: absolute;
+  bottom: 0;
+  width: 90%;
+  height: 2.5rem;
+}
+
+#author {
+  font-size: 20px;
+}
+
+.hidden {
+  display: none;
+}

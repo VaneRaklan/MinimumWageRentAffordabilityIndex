@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+  <script src="http://d3js.org/d3.v5.min.js" charset="utf-8"></script>
+  <script src="https://unpkg.com/topojson@3.0.2/dist/topojson.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
+  <!-- Add dashboard.css link -->
+  <link rel="stylesheet" href="css/Dashboard.css">
+  <!-- Add base.js line -->
+  <script src="js/base.js"></script>
+  <!-- Add sparkline.js link -->
+  <script src="js/sparkline.js"></script>
+
+  <!-- sidebar -->
+  <div id="sidebar">
+    <h1 id="title">Minimum Wage Rent Affordability Index</h1>
+    <p id="author">By Antonio Ramirez</p>
+    <p>Photo by <a href="https://www.pexels.com/@igorlufoto" target="_blank"
+      rel="noopener noreferrer">Игорь Лушницкий</a> from Pexels</p>
+    <p id="desc">Welcome! What you're seeing is the two most populous cities in each
+      state, color coded by an affordability score derived from a composite index that
+      I developed. The index is made up of 4 indicators: minimum wage, average rent for
+      a 1-bedroom apartment, average rent for a 2-bedroom apartment, and the percentage
+      of a full-time minimum wage employee's monthly income that the 1-bedroom rent would
+      take up. The color coding for the states is based on their population density and
+      honestly serves more of an aesthetic purpose.
+      <br>
+      <br>
+      Hovering over a city will highlight it in red and show you the name of that city.
+      Clicking on the city will populate the sidebar with information about its average
+      1-bedroom rent price, minimum wage, monthly pay at that wage (assuming full time at
+      40hrs/week), and the percent of that income that would be required to afford the
+      average cost for a 1-bedroom apartment.
+    </p>
+    <h2 id="name"></h2>
+    <p id="wage"></p>
+    <p id="income"></p>
+    <p id="onebedrent"></p>
+    <p id="onebedpercent"></p>
+    <p id="affordability"></p>
+    <p id="twobedrent"></p>
+    <p id="twobedpercent"></p>
+  </div>
+
+  <!-- mainwindow -->
+  <div id="map"></div>
+  <div id="tooltip"></div>
+
+  <!-- Javascript Code -->
+  <script>
+    var mheight = 800;
+    var mwidth = 1200;
+    var xoffset = 50;
+    var yoffset = 10;
+    var projection = d3.geoAlbersUsa()
+      .scale(1400)
+      .translate([mwidth / 2 + xoffset, mheight / 2 + yoffset])
+    var path = d3.geoPath().projection(projection);
+    var svg = d3.select("#map")
+      .append("svg")
+      .attr("width", mwidth)
+      .attr("height", mheight)
+      .style("border", "4px solid green")
+      .call(d3.zoom().on("zoom", function () {
+        svg.attr("transform", d3.event.transform)
+      }))
+      .append("g");
+
+    // color scale for city wage-rent ratios: green to purple to black
+    var color = d3.scaleLinear()
+      // .domain([40, 50, 75, 100])
+      .domain([1, 2, 3, 4])
+      .range(['#008837', '#C2A5CF', '#7B3294', 'black']);
+
+    // color scale for state population densities: beige to brown
+    var stateColor = d3.scaleLinear()
+      .domain([0, 1200])
+      .range(['beige', 'brown']);
+
+    // helper function for grabbing elements from the DOM
+    function ID(id) {
+      return document.getElementById(id);
+    }
+
+    // outline the item while hovering
+    var hover = function (d) {
+      d3.select(this)
+        .style('stroke', 'red')
+        .style('stroke-width', 2);
+    };
+
+    // take away the outline when the cursor leaves
+    var out = function (d) {
+      d3.select(this).transition().duration(1000)
+        .style('stroke', 'white')
+        .style('stroke-width', 1);
+    }
+
+    // show tooltip with city name when cursor enters
+    var entering = function (d) {
+      var element = ID('tooltip');
+      element.classList.remove('hidden');
+      element.style.left = event.pageX - 135 + 'px';
+      element.style.top = event.pageY - 50 + 'px';
+      element.innerHTML = d.name + ", " + d.state;
+    }
+
+    // hide tooltip when cursor leaves
+    var leaving = function (d) {
+      ID('tooltip').classList.add('hidden');
+    }
+
+    // populate sidebar when the city is clicked
+    var click = function (d) {
+      ID('name').innerHTML = d.name + ", " + d.state + " with a score of " + d.affordability_wpercent_score;
+      ID('onebedrent').innerHTML = "The average cost of rent for a 1 bedroom is: <strong>$" + d.avg_1bed + "</strong>";
+      ID('twobedrent').innerHTML = "The average cost of rent for a 2 bedroom is: <strong>$" + d.avg_2bed + "</strong>";
+      ID('wage').innerHTML = "The minimum wage here is: <strong>$" + d.minimum_wage + "</strong>";
+      ID('income').innerHTML = "If you worked full time (40hrs/week) you'd make: <strong>$" + d.monthly_pay +
+        "</strong>";
+      ID('onebedpercent').innerHTML = "Someone in this position would use <strong>" + d.percent_1bed +
+        "%</strong> of their income to pay for a 1 bedroom apartment";
+      ID('twobedpercent').innerHTML = "Someone in this position would use <strong>" + d.percent_2bed +
+        "%</strong> of their income to pay for a 2 bedroom apartment";
+      var score = d.affordability_wpercent_score
+      if (score == 1) {
+        ID('affordability').innerHTML = "One person could reasonably afford this on their own"
+      } else if (score == 2) {
+        ID('affordability').innerHTML = "One person could probably afford this without much wiggle room"
+      } else if (score == 3) {
+        ID('affordability').innerHTML =
+          "One person probably couldn't afford this on their own and would have to have a roommate"
+      } else if (score == 4) {
+        ID('affordability').innerHTML =
+          "At this rate, two people would either start to feel some struggles or wouldn't be able to make it work"
+      }
+    }
+    var triangle = function (x, y) {
+      var c = 7;
+      var top = x + " " + (y - c);
+      var left = (x - c) + " " + (y + c);
+      var right = (x + c) + " " + (y + c);
+      return top + ", " + right + ", " + left;
+    }
+    // Load the data
+    d3.json('data/usState.geojson').then(function (data) {
+      console.log('usState', data);
+      var map = svg.append('g').attr('class', 'boundary');
+      usa = map.selectAll('path').data(data.features);
+      usa.enter()
+        .append('path')
+        .attr('d', path)
+        .style('fill', function (d) {
+          return stateColor(d.properties.density);
+        })
+        .style('stroke', 'grey')
+        .style('stroke-width', '2px');
+
+      // add a legend
+      var rect_x = 500, rect_y = 60, rect_w = 80, rect_h = 20;
+      svg.append('rect')
+        .attr('x', rect_x)
+        .attr('y', rect_y)
+        .attr('width', 80)
+        .attr('height', 20)
+        .attr('stroke', 'black')
+        .attr('fill', '#008837');
+      svg.append('rect')
+        .attr('x', rect_x + 100)
+        .attr('y', rect_y)
+        .attr('width', rect_w)
+        .attr('height', rect_h)
+        .attr('stroke', 'black')
+        .attr('fill', '#C2A5CF');
+      svg.append('rect')
+        .attr('x', rect_x + 200)
+        .attr('y', rect_y)
+        .attr('width', rect_w)
+        .attr('height', rect_h)
+        .attr('stroke', 'black')
+        .attr('fill', '#7B3294');
+      svg.append('rect')
+        .attr('x', rect_x + 300)
+        .attr('y', rect_y)
+        .attr('width', rect_w)
+        .attr('height', rect_h)
+        .attr('stroke', 'black')
+        .attr('fill', 'black');
+      var text_x = 540, text_y = 100;
+      svg.append("text").attr("x", text_x).attr("y", text_y).text("1").style("font-size", "15px").attr(
+        "alignment-baseline", "middle")
+      svg.append("text").attr("x", text_x + 100).attr("y", text_y).text("2").style("font-size", "15px").attr(
+        "alignment-baseline", "middle")
+      svg.append("text").attr("x", text_x + 200).attr("y", text_y).text("3").style("font-size", "15px").attr(
+        "alignment-baseline", "middle")
+      svg.append("text").attr("x", text_x + 300).attr("y", text_y).text("4").style("font-size", "15px").attr(
+        "alignment-baseline", "middle")
+        svg.append("text").attr("x", text_x + 80).attr("y", text_y - 60).text("Affordability Score").style("font-size", "20px").attr(
+        "alignment-baseline", "middle")
+
+      // add cities to the map
+      d3.csv('data/uscityaffordabilityindex.csv').then(function (data) {
+        svg.selectAll("circle").data(data)
+          .enter()
+          .append("polygon")
+          .attr("class", "cities")
+          .attr("points", d => triangle(projection([d.lon, d.lat])[0], projection([d.lon, d.lat])[1]))
+          .style('fill', function (d) {
+            return color(d.affordability_wpercent_score);
+          })
+          .style('stroke', 'white')
+          .style('stroke-width', 1)
+          .on('mouseover', hover)
+          .on('mouseout', out)
+          .on('click', click)
+          .on('mouseenter', entering)
+          .on('mouseleave', leaving);
+      });
+    });
+  </script>
+</body>
+
+</html>
